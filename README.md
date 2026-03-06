@@ -1,0 +1,3 @@
+# Disclaimer
+This project is an independent, clean-room implementation inspired by the GPC scripting language. It is not affiliated with, endorsed by, or associated with Cronus, Collective Minds or its developers. The compiler, bytecode format, and virtual machine in this repository were written entirely from scratch and do not contain any reverse-engineered code, proprietary assets, or confidential documentation from Cronus software or devices. No components of this project interact with Cronus hardware, firmware, or official tooling. The implementation is based solely on publicly available information and independent design decisions.
+Cronus and Cronus Zen are trademarks of their respective owners. This project is not affiliated with or endorsed by them.
