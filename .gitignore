@@ -26,5 +26,7 @@ target
 /target
 
 # Manual additions
+tests/
 .vscode/
 *.xml
+structure.md

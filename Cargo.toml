@@ -3,6 +3,10 @@ name = "opengpc"
 version = "0.1.0"
 edition = "2024"
 
+[[bin]]
+name = "ogpc"
+path = "src/main.rs"
+
 [dependencies]
 # evdevil = "0.4.0" -- Will be used later when needed.
 solgpc = "0.1.0"

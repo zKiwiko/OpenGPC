@@ -8,9 +8,8 @@ Cronus, ConsoleTuner, Cronus Zen are trademarks of their respective owners. This
 OpenGPC is an independent, community-driven project that provides an open-source implementation of the GPC scripting language. It enables the same functionality as commercial devices like the Cronus Max/Zen and Titan One/Two, but directly on computers without requiring external hardware.
 OpenGPC is designed as a standalone implementation and does not interact with proprietary hardware, reverse-engineered components, or external device firmware. OpenGPC binaries are intended for use with OpenGPC itself and projects that adopt its bytecode format and design specifications.
 
-The project primarily targets Collective Minds' GPC syntax, the most widely-used format, and aims for compatibility with existing Cronus Zen scripts while maintaining its own language implementation and backend design while
-still adding quality of life features and design choices, leveraging the increased power of computers as opposed
-to embedded devices.
+The project primarily targets Collective Minds' GPC syntax, the most widely-used format, and aims for compatibility with existing Cronus Zen scripts while maintaining its own language
+implementation and backend design while still adding quality of life features and design choices, leveraging the increased power of computers as opposedto embedded devices.
 
 OpenGPC is written fully in Rust.
 
