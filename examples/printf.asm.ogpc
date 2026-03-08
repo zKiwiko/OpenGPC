@@ -1,0 +1,9 @@
+.constants:
+    ."Hello, OpenGPC VM!";
+
+LoadK  0 0    ; R0 = "Hello, OpenGPC VM!"
+Printf 0 0 0  ; PRINTF R0
+Halt   0 0 0  ; Exit/Kill/Quit/etc
+
+; Output
+; stdout: "Hello, OpenGPC VM!"

@@ -9,7 +9,7 @@ OpenGPC is an independent, community-driven project that provides an open-source
 OpenGPC is designed as a standalone implementation and does not interact with proprietary hardware, reverse-engineered components, or external device firmware. OpenGPC binaries are intended for use with OpenGPC itself and projects that adopt its bytecode format and design specifications.
 
 The project primarily targets Collective Minds' GPC syntax, the most widely-used format, and aims for compatibility with existing Cronus Zen scripts while maintaining its own language
-implementation and backend design while still adding quality of life features and design choices, leveraging the increased power of computers as opposedto embedded devices.
+implementation and backend design, while still adding quality of life features and design choices, leveraging the increased power of computers as opposed to embedded devices.
 
 OpenGPC is written fully in Rust.
 
@@ -25,5 +25,10 @@ understand their code. Alternatively, you can also input a binary and get that s
 ## Virtual Machine
 
 OpenGPC uses a register based virtual machine to interpret its binaries.
-Its specialized opcodes for different types of operations help it be as fast as it possibly can - the less instructions
-the better.
+Its specialized opcodes for different types of operations help it be as fast as it possibly
+can - the less instructions the better.
+
+Since OpenGPC isnt designed to run on embedded hardware like other implementations of the
+language, OpenGPC is able to get array with more intensive operations and tricks in
+general compared to others. A couple examples would be mutable arrays, floating point numbers,
+and locally-scoped variables.

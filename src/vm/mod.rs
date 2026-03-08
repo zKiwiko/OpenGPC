@@ -86,6 +86,8 @@ pub struct VM {
     pub strings: Vec<String>,
     /// Global variable table, indexed by a u16 key.
     pub globals: Vec<Value>,
+    /// Array heap; `Value::Array(i)` resolves to `arrays[i as usize]`.
+    pub arrays: Vec<Vec<Value>>,
     /// Function table; `Value::Func(i)` resolves to `functions[i as usize]`.
     pub functions: Vec<FuncProto>,
     /// The instruction stream (function bodies and main code share one flat vec).
@@ -113,6 +115,7 @@ impl VM {
             constants,
             strings,
             globals: Vec::new(),
+            arrays: Vec::new(),
             functions,
             code,
             ip: 0,
@@ -357,7 +360,7 @@ impl VM {
             }
 
             Opcode::LoadInt => {
-                self.registers[self.reg(instr.a())] = Value::Int(instr.d() as i32);
+                self.registers[self.reg(instr.a())] = Value::Int(instr.d() as i16 as i32);
             }
 
             Opcode::LoadBool => {
@@ -456,7 +459,21 @@ impl VM {
                         let ch = s.chars().nth(idx).unwrap_or('\0');
                         self.registers[a] = Value::Int(ch as u32 as i32);
                     }
-                    other => panic!("GETINDEX: expected Str, got {other:?}"),
+                    Value::Array(ai) => {
+                        let idx = match self.registers[c] {
+                            Value::Int(n) => n as usize,
+                            other => {
+                                panic!("GETINDEX: expected Int index for Array, got {other:?}")
+                            }
+                        };
+                        let result = self
+                            .arrays
+                            .get(ai as usize)
+                            .and_then(|arr| arr.get(idx).copied())
+                            .unwrap_or(Value::Nil);
+                        self.registers[a] = result;
+                    }
+                    other => panic!("GETINDEX: expected Str or Array, got {other:?}"),
                 }
             }
             Opcode::SetIndex => {
@@ -485,14 +502,34 @@ impl VM {
                             *s = chars.into_iter().collect();
                         }
                     }
-                    other => panic!("SETINDEX: expected Str, got {other:?}"),
+                    Value::Array(ai) => {
+                        let idx = match self.registers[b] {
+                            Value::Int(n) => n as usize,
+                            other => {
+                                panic!("SETINDEX: expected Int index for Array, got {other:?}")
+                            }
+                        };
+                        let val = self.registers[c];
+                        let arr = self
+                            .arrays
+                            .get_mut(ai as usize)
+                            .unwrap_or_else(|| panic!("SETINDEX: invalid array index {ai}"));
+                        if idx < arr.len() {
+                            arr[idx] = val;
+                        }
+                    }
+                    other => panic!("SETINDEX: expected Str or Array, got {other:?}"),
                 }
             }
 
+            // NEWARRAY A D
+            //   Allocates a new array of D Nil slots on the array heap.
+            //   registers[A] = Value::Array(heap_index)
             Opcode::NewArray => {
-                // TODO: requires a Value::Array variant and a heap/array table on the VM.
-                // A little lazy ill do this later
-                unimplemented!("NEWARRAY: Value::Array not yet implemented");
+                let size = instr.d() as usize;
+                let idx = self.arrays.len() as u32;
+                self.arrays.push(vec![Value::Nil; size]);
+                self.registers[self.reg(instr.a())] = Value::Array(idx);
             }
 
             // COPYRANGE A B C  (ABC)
@@ -506,6 +543,97 @@ impl VM {
                     self.registers[a + i] = self.registers[b + i];
                 }
             }
+
+            Opcode::LenV => {
+                let b = self.reg(instr.b());
+                match self.registers[b] {
+                    Value::Str(si) => {
+                        let len = self
+                            .strings
+                            .get(si as usize)
+                            .map(|s| s.chars().count())
+                            .unwrap_or(0);
+                        self.registers[self.reg(instr.a())] = Value::Int(len as i32);
+                    }
+                    Value::Array(ai) => {
+                        let len = self
+                            .arrays
+                            .get(ai as usize)
+                            .map(|arr| arr.len())
+                            .unwrap_or(0);
+                        self.registers[self.reg(instr.a())] = Value::Int(len as i32);
+                    }
+                    other => panic!("LENV: expected Str or Array, got {other:?}"),
+                }
+            }
+
+            Opcode::LenK => {
+                let d = instr.d() as usize;
+                match self.constants.get(d) {
+                    Some(Value::Str(si)) => {
+                        let s = self
+                            .strings
+                            .get(*si as usize)
+                            .map(String::as_str)
+                            .unwrap_or("<invalid string index>");
+                        self.registers[self.reg(instr.a())] = Value::Int(s.chars().count() as i32);
+                    }
+                    Some(other) => panic!("LENK: expected Str constant, got {other:?}"),
+                    None => panic!("LENK: invalid constant index {d}"),
+                }
+            }
+
+            Opcode::ConcatVV => {
+                let b = self.reg(instr.b());
+                let c = self.reg(instr.c());
+                let s1 = match self.registers[b] {
+                    Value::Str(si) => self
+                        .strings
+                        .get(si as usize)
+                        .map(String::as_str)
+                        .unwrap_or("<invalid string index>"),
+                    other => panic!("CONCATVV: expected Str, got {other:?}"),
+                };
+                let s2 = match self.registers[c] {
+                    Value::Str(si) => self
+                        .strings
+                        .get(si as usize)
+                        .map(String::as_str)
+                        .unwrap_or("<invalid string index>"),
+                    other => panic!("CONCATVV: expected Str, got {other:?}"),
+                };
+                let result = format!("{}{}", s1, s2);
+                let idx = self.strings.len() as u32;
+                self.strings.push(result);
+                self.registers[self.reg(instr.a())] = Value::Str(idx);
+            }
+
+            Opcode::ConcatVK => {
+                let b = self.reg(instr.b());
+                let c = instr.c() as usize;
+                let s1 = match self.registers[b] {
+                    Value::Str(si) => self
+                        .strings
+                        .get(si as usize)
+                        .map(String::as_str)
+                        .unwrap_or("<invalid string index>"),
+                    other => panic!("CONCATVK: expected Str, got {other:?}"),
+                };
+                let s2 = match self.constants.get(c) {
+                    Some(Value::Str(si)) => self
+                        .strings
+                        .get(*si as usize)
+                        .map(String::as_str)
+                        .unwrap_or("<invalid string index>"),
+                    Some(other) => panic!("CONCATVK: expected Str constant, got {other:?}"),
+                    None => panic!("CONCATVK: invalid constant index {c}"),
+                };
+                let result = format!("{}{}", s1, s2);
+                let idx = self.strings.len() as u32;
+                self.strings.push(result);
+                self.registers[self.reg(instr.a())] = Value::Str(idx);
+            }
+
             // ── Functions ─────────────────────────────────────────────────
             //
             // CALL Ra Argc Retc  (ABC)
@@ -574,7 +702,8 @@ impl VM {
                     println!("{s}");
                 }
                 Value::Int(n) => println!("{n}"),
-                other => panic!("PRINTF: expected Str or Int, got {other:?}"),
+                Value::Bool(b) => println!("{b}"),
+                other => panic!("PRINTF: expected Str, Int, Bool, got {other:?}"),
             },
             Opcode::Nop => {
                 // Do nothing :p
@@ -593,6 +722,7 @@ impl VM {
             Value::Bool(b) => b,
             Value::Int(n) => n != 0,
             Value::Func(_) => true,
+            Value::Array(_) => true,
             Value::Str(i) => !self
                 .strings
                 .get(i as usize)

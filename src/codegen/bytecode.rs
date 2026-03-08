@@ -81,8 +81,8 @@ pub enum Opcode {
     Jump,      // AD: ip = D
     JumpIf,    // AD: if registers[A] is truthy  → ip = D
     JumpIfNot, // AD: if registers[A] is falsy   → ip = D
-    ForPrep,   // AD: registers[A] -= D; ip += D (LuaJIT)
-    ForLoop,   // AD: registers[A] += D; if registers[A] < registers[A+1] then ip += D (LuaJIT)
+    ForPrep,   // AD: registers[A] -= D; ip += Absolute(D)
+    ForLoop,   // AD: registers[A] += D; if registers[A] < registers[A+1] then ip += Absolute(D)
     TailCall,  // ABC: A = func reg, B = argc, C = retc; like CALL but does not return to caller
 
     // ── Data movement ────────────────────────────
@@ -98,6 +98,10 @@ pub enum Opcode {
     SetIndex,    // ABC: registers[A][registers[B]] = registers[C]
     NewArray,    // AD:  registers[A] = new array of size D
     CopyRange,   // AD:  copy registers[A..A+D-1] to registers[A+1..A+D]
+    LenV,        // AB:  registers[A] = len(registers[B])
+    LenK,        // AD:  registers[A] = len(constants[D])
+    ConcatVV,    // ABC: registers[A] = registers[B] .. registers[C]
+    ConcatVK,    // ABC: registers[A] = registers[B] .. constants[C]
     // ── Arithmetic (ABC) ─────────────────────────
     AddVV, // registers[A] = registers[B] + registers[C]
     AddVK, // registers[A] = registers[B] + constants[C]
@@ -183,6 +187,7 @@ pub enum Value {
     Nil,
     Bool(bool),
     Int(i32),
-    Str(u32),  // index into the VM's string table
-    Func(u16), // index into the VM's function table
+    Str(u32),   // index into the VM's string table
+    Func(u16),  // index into the VM's function table
+    Array(u32), // index into the VM's array heap
 }
