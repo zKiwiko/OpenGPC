@@ -47,8 +47,8 @@ pub struct Script {
     pub init_fn: Option<u16>,
     /// Function table index of the `main {}` block — looped until `Halt`.
     pub main_fn: Option<u16>,
-    /// How long to pause between `main` iterations.
-    /// `None` means run as fast as possible (useful for tests and tooling).
+    /// Initial tick interval. `None` means run as fast as possible.
+    /// Can be changed at runtime by the `VmTctrl` opcode.
     pub tick_interval: Option<TickInterval>,
 }
 
@@ -101,6 +101,8 @@ pub struct VM {
     window_base: usize,
     /// Call stack — grows on `Call`, shrinks on `Return`.
     call_stack: Vec<CallFrame>,
+
+    pub tick_interval: Option<TickInterval>,
 }
 
 impl VM {
@@ -121,6 +123,7 @@ impl VM {
             ip: 0,
             window_base: 0,
             call_stack: Vec::new(),
+            tick_interval: None,
         }
     }
 
@@ -140,12 +143,13 @@ impl VM {
     /// R0 is used as a scratch register in the bootstrap frame (window_base 0).
     /// All `FuncProto::entry` values are shifted past the preamble automatically.
     ///
-    /// Returns `(vm, main_loop_ip, tick_interval)`:
+    /// Returns `(vm, main_loop_ip)`:
     /// - `main_loop_ip` — the preamble IP that starts each `main` iteration;
     ///   pass this to [`VM::run_script`] so it knows when to sleep.
     ///   `None` when there is no `main` block.
-    /// - `tick_interval` — taken from [`Script::tick_interval`].
-    pub fn from_script(mut script: Script) -> (Self, Option<usize>, Option<TickInterval>) {
+    /// - The initial tick interval is taken from [`Script::tick_interval`] and
+    ///   stored in `vm.tick_interval`; it can be changed at runtime by `VmTctrl`.
+    pub fn from_script(mut script: Script) -> (Self, Option<usize>) {
         // Scratch register used exclusively during the bootstrap frame.
         const BR: u8 = 0;
 
@@ -190,11 +194,10 @@ impl VM {
         let mut code = preamble;
         code.extend(script.code);
 
-        (
-            VM::new(code, script.constants, script.strings, script.functions),
-            main_loop_ip,
-            tick_interval,
-        )
+        let mut vm = VM::new(code, script.constants, script.strings, script.functions);
+        vm.tick_interval = tick_interval;
+
+        (vm, main_loop_ip)
     }
 
     /// Run the VM until `ip` falls off the end of the code or a `Halt` is executed.
@@ -219,8 +222,10 @@ impl VM {
     ///
     /// Executes the bootstrap preamble built by [`VM::from_script`]. When
     /// `main` returns to the preamble `JUMP`, execution pauses for
-    /// [`Script::tick_interval`] before the next iteration. If `tick_interval`
-    /// is `None` the loop runs without any delay.
+    /// `self.tick_interval` before the next iteration. If `tick_interval`
+    /// is `None` the loop runs without any delay. The interval can be changed
+    /// at runtime (e.g. by a future `VmTctrl` opcode) and takes effect on the
+    /// next tick.
     ///
     /// The `main_loop_ip` is the address of the `LOADFUNC` instruction in the
     /// preamble that starts each `main` iteration. The VM detects that the IP
@@ -228,12 +233,7 @@ impl VM {
     ///
     /// `stop` is called once per tick; return `true` to halt the loop (useful
     /// for signal handling or frame-budget enforcement in the host driver).
-    pub fn run_script(
-        &mut self,
-        main_loop_ip: usize,
-        tick_interval: Option<TickInterval>,
-        mut stop: impl FnMut() -> bool,
-    ) {
+    pub fn run_script(&mut self, main_loop_ip: usize, mut stop: impl FnMut() -> bool) {
         loop {
             if self.ip >= self.code.len() {
                 break;
@@ -244,7 +244,7 @@ impl VM {
                 if stop() {
                     break;
                 }
-                if let Some(interval) = tick_interval {
+                if let Some(interval) = self.tick_interval {
                     std::thread::sleep(interval.as_duration());
                 }
             }

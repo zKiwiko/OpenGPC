@@ -5,11 +5,15 @@ Cronus, ConsoleTuner, Cronus Zen are trademarks of their respective owners. This
 
 # About OpenGPC
 
-OpenGPC is an independent, community-driven project that provides an open-source implementation of the GPC scripting language. It enables the same functionality as commercial devices like the Cronus Max/Zen and Titan One/Two, but directly on computers without requiring external hardware.
-OpenGPC is designed as a standalone implementation and does not interact with proprietary hardware, reverse-engineered components, or external device firmware. OpenGPC binaries are intended for use with OpenGPC itself and projects that adopt its bytecode format and design specifications.
+OpenGPC is an independent, community-driven project that provides a development toolkit, compiler, and
+virtual machine/simulator for GPC Scripting Language. OpenGPC focuses on providing tools for experimenting
+with, analyzing and debugging GPC Scripts without needing external hardware. OpenGPC allows developers
+to compile and run GPC Scripts inside a sandboxed runtime.
 
-The project primarily targets Collective Minds' GPC syntax, the most widely-used format, and aims for compatibility with existing Cronus Zen scripts while maintaining its own language
-implementation and backend design, while still adding quality of life features and design choices, leveraging the increased power of computers as opposed to embedded devices.
+OpenGPC primarily targets Collective Mind's GPC syntax as its the most widly used variant but eventually
+will support other variants like ConsoleTuner's implementation.
+
+OpenGPC is designed as a standalone implementation and does not interact with proprietary hardware, reverse-engineered components, or external device firmware. OpenGPC binaries are intended for use with OpenGPC itself and projects that adopt its bytecode format and design specifications.
 
 OpenGPC is written fully in Rust.
 
@@ -17,10 +21,9 @@ OpenGPC is written fully in Rust.
 
 OpenGPC compiles GPC code into its own bytecode format - loosely inspired by LuaJIT and CPython - using
 specialized Opcodes for comparisons, arthmetic, reading, and loading from registers or constants specifically.
-Using (the extremely fast) [solgpc](https://github.com/zkiwiko/solgpc) as its parser and AST layout.
 
-OpenGPC's compiler allows you to output your compiled code in an assembly-like language in order to help developers
-understand their code. Alternatively, you can also input a binary and get that same output.
+OpenGPC's compiler allows you to output your compiled code in an assembly-like language in order to
+help developers understand their code. Alternatively, you can also input a binary and get that same output.
 
 ## Virtual Machine
 
@@ -32,3 +35,12 @@ Since OpenGPC isnt designed to run on embedded hardware like other implementatio
 language, OpenGPC is able to get array with more intensive operations and tricks in
 general compared to others. A couple examples would be mutable arrays, floating point numbers,
 and locally-scoped variables.
+
+## Simulation
+
+OpenGPC's simulator has some important limitations to consider. Since OpenGPC runs on general-purpose hardware rather than embedded systems, its timing reports may differ from other implementations. However, the simulator is designed to be as accurate as possible within these constraints.
+
+Instead of interacting with real hardware, games, or your computer - scripts are executed in a sandboxed
+Virtual Machine, where their behavior can be inspected and analyzed. This allows developers to Trace
+script execution, inspect register values and variables, view combo timing and control flow, debug
+logical errors.

@@ -143,7 +143,7 @@ pub enum Opcode {
     ShrVV, // registers[A] = registers[B] >> registers[C]
     ShrVK, // registers[A] = registers[B] >> constants[C]
     SarVV, // registers[A] = registers[B] >> registers[C] (arithmetic shift)
-    SarVK, // registers[A] = registers[B] >> constants[C] (arithmetic
+    SarVK, // registers[A] = registers[B] >> constants[C] (arithmetic shift)
 
     // ── Functions ────────────────────────────────────────
     //
@@ -161,6 +161,9 @@ pub enum Opcode {
 
     // OpenGPC Specific Instructions
     Printf,
+    Ref,   // AB: registers[A] = &registers[B]
+    Deref, // AB: registers[A] = *registers[B]
+
     // Compatibility Specific Instructions
     // These are based on speculation of what properietary GPC
     //  compilers might produce, and may be removed or changed in the future.
